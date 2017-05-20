@@ -1,3 +1,5 @@
+#include <EEPROMex.h>
+#include <EEPROMVar.h>
 /*
   Name:		transmitterCode.ino
   Created:	1/5/2017 9:21:45 AM
@@ -15,10 +17,22 @@
 #define debug 1
 // default channel number
 int channel = 30;
+// address of EEPROM
+int address = 0;
 // PID default
 #define defaultP 1
 #define defaultI 0
 #define defaultD .5
+
+int PIDAddr, CalAddr;
+struct PIDVal {
+  float P = defaultP, I = defaultI, D = defaultD;
+};
+PIDVal mPID;
+struct CalVal {
+  int8_t roll, pitch, throttle;
+};
+CalVal mCal;
 
 /************************
  *** GLOBAL VARIABLES****
@@ -29,7 +43,7 @@ RF24 radio(CEpin, CSpin);
 rx_values_t rxValues;
 // timing variables for timing loop
 unsigned long curtime, prevTime;
-float P = defaultP, I = defaultI, D = defaultD;
+
 // trim variables for adjusting for drift
 trim rollTrim(upRollPin, downRollPin);
 trim pitchTrim(upPitchPin, downPitchPin);
@@ -38,7 +52,7 @@ int8_t throttleCal = 0, pitchCal = 0, rollCal = 0;
 // controller variable: in charge of sending/receiving true means this is for the controller (swaps addresses)
 Controller controller(&radio, channel, true);
 // two buttons on the joysticks for whatever you want
-buttonManager flipButton(flipPin, 0x0), modeButton(modePin, 0x0);
+buttonManager flipButton(flipPin, 0x0, true), modeButton(modePin, 0x0, true);
 /************************
  *****SETUP FUNCTION*****
  ************************/
@@ -56,6 +70,8 @@ void setup() {
   initButtons();
   //sets up the default PID values
   initPID();
+  //sets up calibration offsets
+  initCal();
   if (debug) {
     Serial.println("printing radio details");
     radio.printDetails();
@@ -74,24 +90,16 @@ void loop() {
   // check to see if a trim button was pressed and update the trim value
   updateTrims();
   // send the struct to the quadcopter
-  //    Serial.print(" :\t"); Serial.print(rxValues.throttle);
-  //    Serial.print("\t"); Serial.print(rxValues.yaw);
-  //    Serial.print("\t"); Serial.print(rxValues.pitch);
-  //    Serial.print("\t"); Serial.print(rxValues.roll);
-  //    Serial.print("\t"); Serial.print(rxValues.flip);
-  //    Serial.print("\t"); Serial.print(rxValues.highspeed);
-  //    Serial.print("\t"); Serial.print(rxValues.P);
-  //    Serial.print("\t"); Serial.print(rxValues.I);
-  //    Serial.print("\t"); Serial.println(rxValues.D);
+
   controller.send(&rxValues);
   // receive a struct from the quadcopter (if available)
   if (controller.receive(&rxValues)) {
     // update the quadcopter light
     auxIndicator(rxValues.auxLED);
   }
-  curtime = millis();
-  Serial.print("loop time: ");
-  Serial.println(curtime - prevTime);
-  prevTime = curtime;
+  //  curtime = millis();
+  //  Serial.print("loop time: ");
+  //  Serial.println(curtime - prevTime);
+  //  prevTime = curtime;
 }
 

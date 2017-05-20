@@ -18,10 +18,42 @@ void initButtons() {
   pinMode(contBattPin, INPUT);
 }
 void initPID() {
-  if (debug)
-    Serial.println("Setting Default PID Values");
-  rxValues.P = defaultP;
-  rxValues.I = defaultI;
-  rxValues.D = defaultD;
+  PIDVal test;
+  test.P = -1;
+  test.I = -1;
+  test.D = -1;
+  while (!EEPROM.isReady()) {};
+  Serial.println("Initializing Default PID Values");
+  PIDAddr = EEPROM.getAddress(sizeof(PIDVal));
+  // read in EEPROM
+  EEPROM.readBlock(PIDAddr, mPID);
+  Serial.print("PID Address: ");
+  Serial.println(PIDAddr);
+  Serial.print("\t"); Serial.print(mPID.P);
+  Serial.print("\t"); Serial.print(mPID.I);
+  Serial.print("\t"); Serial.println(mPID.D);
+  // if data has been written, update the values
+  if (isnan(mPID.P) || isnan(mPID.I) || isnan(mPID.D))
+  {
+    Serial.println("first time writing to PID EEPROM");
+    mPID.P = defaultP;
+    mPID.I = defaultI;
+    mPID.D = defaultD;
+    EEPROM.updateBlock(PIDAddr, mPID);
+  }
 }
-
+void initCal() {
+  Serial.println("Initializing Default Calibration Values");
+  CalAddr = EEPROM.getAddress(sizeof(CalVal));
+  // read in EEPROM
+  EEPROM.readBlock(CalAddr, mCal);
+  // if data has been written, update the values
+  if ((mCal.roll == 0xFF) || (mCal.pitch == 0xFF) || isnan(mCal.throttle == 0xFF))
+  {
+    Serial.println("first time writing to Calibration EEPROM");
+    mCal.roll = 0;
+    mCal.pitch = 0;
+    mCal.throttle = 0;
+    EEPROM.writeBlock(CalAddr, mCal);
+  }
+}

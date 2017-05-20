@@ -17,17 +17,28 @@ void updateSerial() {
   cmd = Serial.read();
   switch (cmd) {
     case 't':
-      P = Serial.parseFloat();
-      I = Serial.parseFloat();
-      D = Serial.parseFloat();
+      mPID.P = Serial.parseFloat();
+      mPID.I = Serial.parseFloat();
+      mPID.D = Serial.parseFloat();
       if (debug) {
         Serial.print("P= ");
-        Serial.println(P);
+        Serial.println(mPID.P);
         Serial.print("I= ");
-        Serial.println(I);
+        Serial.println(mPID.I);
         Serial.print("D= ");
-        Serial.println(D);
+        Serial.println(mPID.D);
       }
+      break;
+    case 'p':
+      Serial.print(" :\t"); Serial.print(rxValues.throttle);
+      Serial.print("\t"); Serial.print(rxValues.yaw);
+      Serial.print("\t"); Serial.print(rxValues.pitch);
+      Serial.print("\t"); Serial.print(rxValues.roll);
+      Serial.print("\t"); Serial.print(rxValues.flip);
+      Serial.print("\t"); Serial.print(rxValues.highspeed);
+      Serial.print("\t"); Serial.print(rxValues.P);
+      Serial.print("\t"); Serial.print(rxValues.I);
+      Serial.print("\t"); Serial.println(rxValues.D);
       break;
     case 'c':
       channel = Serial.parseInt();
@@ -40,18 +51,41 @@ void updateSerial() {
       Serial.println("KILLING THE QUAD!!!");
       break;
     case 'r':
-      Serial.println("calibration!");
       calibrateJoysticks();
       break;
-
+    case 'e':
+      char cmdEEPROM = Serial.read();
+      if (cmdEEPROM == 't')
+        savePID();
+      else if (cmdEEPROM == 'r')
+        saveCal();
+      break;
   }
   Serial.println(cmd);
+  Serial.flush();
 }
 void calibrateJoysticks()
 {
-  throttleCal = 0 - (analogRead(throttlePin) >> 2);
-  rollCal = 128 - (255 - (analogRead(rollPin) >> 2));
-  pitchCal = 128 - (analogRead(pitchPin) >> 2);
+  Serial.println("calibration!");
+  mCal.throttle = 0 - (analogRead(throttlePin) >> 2);
+  mCal.roll = 128 - (255 - (analogRead(rollPin) >> 2));
+  mCal.pitch = 128 - (analogRead(pitchPin) >> 2);
+  Serial.print(mCal.throttle); Serial.print('\t');
+  Serial.print(mCal.pitch); Serial.print('\t');
+  Serial.println(mCal.roll);
+}
+void saveCal()
+{
+  Serial.println("Saving Cal Data to EEPROM!");
+  EEPROM.updateBlock(CalAddr, mCal);
+}
+void savePID()
+{
+  Serial.println("Saving PID Data to EEPROM!");
+  Serial.print("PID Address: ");
+  Serial.println(PIDAddr);
+  if (!EEPROM.writeBlock(PIDAddr, mPID))
+    Serial.println("PID EEPROM update failed!");
 }
 uint8_t checkBounds(int16_t check) {
   if (check > 255)
@@ -62,9 +96,9 @@ uint8_t checkBounds(int16_t check) {
 }
 void updateJoysticks() {
   //store data into 1 byte chuncks
-  int16_t tempThrottle = (analogRead(throttlePin) >> 2) + throttleCal;
-  int16_t tempRoll = (255 - (analogRead(rollPin) >> 2)) + rollCal + rollTrim.getValue();
-  int16_t tempPitch = (analogRead(pitchPin) >> 2) + pitchCal + pitchTrim.getValue();
+  int16_t tempThrottle = (analogRead(throttlePin) >> 2) + mCal.throttle;
+  int16_t tempRoll = (255 - (analogRead(rollPin) >> 2)) + mCal.roll + rollTrim.getValue();
+  int16_t tempPitch = (analogRead(pitchPin) >> 2) + mCal.pitch + pitchTrim.getValue();
 
   rxValues.throttle = checkBounds(tempThrottle);
   rxValues.roll = checkBounds(tempRoll);
@@ -77,9 +111,9 @@ void updateTrims() {
   pitchTrim.updateValue();
   yawTrim.updateValue();
   rollTrim.updateValue();
-  rxValues.P = P;
-  rxValues.I = I;
-  rxValues.D = D;
+  rxValues.P = mPID.P;
+  rxValues.I = mPID.I;
+  rxValues.D = mPID.D;
 }
 void auxIndicator(bool isLED) {
   digitalWrite(auxLEDPin, isLED);

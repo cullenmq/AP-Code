@@ -7,7 +7,7 @@
 	#include "arduino.h"
 #endif
 #include "RF24.h"
-typedef struct rx_values_t {
+struct rx_values_t {
 	float P = 1;
 	float I = 0;
 	float D = 0;

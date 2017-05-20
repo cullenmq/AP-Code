@@ -6,6 +6,7 @@
 class buttonManager {
   public:
     buttonManager(uint8_t pin, uint8_t key);
+    buttonManager::buttonManager(uint8_t pin, uint8_t key, uint8_t isHold);
     void init();
     bool checkPin();
   private:
@@ -13,6 +14,7 @@ class buttonManager {
     // shift register
     uint8_t sReg;
     uint8_t mKey;
+    uint8_t mHold;
     // keeps track of prev time for sampling purposes
     unsigned long prevTime;
 };

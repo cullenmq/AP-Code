@@ -1,8 +1,11 @@
 #include "buttonManager.h"
 #include "arduino.h"
-#define SAMPLE_TIME 100
-buttonManager::buttonManager(uint8_t pin, uint8_t key)
-  : mPin(pin), mKey(key), prevTime(0), sReg(0) {}
+#define SAMPLE_TIME 20
+buttonManager::buttonManager(uint8_t pin, uint8_t key) {
+  buttonManager(pin, key, false);
+}
+buttonManager::buttonManager(uint8_t pin, uint8_t key, uint8_t isHold)
+  : mPin(pin), mKey(key), prevTime(0), sReg(0), mHold(isHold) {}
 void buttonManager::init()
 {
   pinMode(mPin, INPUT_PULLUP);
@@ -22,6 +25,8 @@ bool buttonManager::checkPin() {
     sReg &= 0x7;
 
   }
+  else if (!mHold)
+    return false;
   //high low low
   if (sReg == mKey)
     return true;
