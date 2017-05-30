@@ -4,7 +4,13 @@
    possible commands:
      k              : kills the quadcopter (kill switch)
      t 1.5 1.1 .9   : updates PID to P=1.5, I=1.1, D=.9
+     et             : saves tuning constants to EEPROM
      c 20           : updates channel to 20
+     ec             : saves channel to EEPROM
+     r              : resets calibration data
+     er             : saves calibration data to EEPROM
+     p              : prints out a single line of data
+
 */
 void updateSerial() {
   char cmd = ' ';
@@ -47,7 +53,7 @@ void updateSerial() {
       Serial.println(channel);
       break;
     case 'k':
-      rxValues.safety = 1;
+      quadKill = true;
       Serial.println("KILLING THE QUAD!!!");
       break;
     case 'r':
@@ -59,7 +65,10 @@ void updateSerial() {
         savePID();
       else if (cmdEEPROM == 'r')
         saveCal();
+      else if (cmdEEPROM == 'c')
+        saveChannel();
       break;
+
   }
   Serial.println(cmd);
   Serial.flush();
@@ -78,6 +87,11 @@ void saveCal()
 {
   Serial.println("Saving Cal Data to EEPROM!");
   EEPROM.updateBlock(CalAddr, mCal);
+}
+void saveChannel()
+{
+  Serial.println("Saving Channel Data to EEPROM!");
+  EEPROM.updateByte(ChannelAddr, channel);
 }
 void savePID()
 {
@@ -106,6 +120,26 @@ void updateJoysticks() {
   rxValues.yaw = 255 - (analogRead(yawPin) >> 2) + yawTrim.getValue();
   rxValues.flip = flipButton.checkPin();
   rxValues.highspeed = modeButton.checkPin();
+  // check for kill
+  if (rxValues.flip && rxValues.highspeed) {
+    if (wasKillLow) {
+      Serial.println("kill sequence started!");
+      killTime = millis();
+      wasKillLow = false;
+    }
+  }
+  else
+    wasKillLow = true;
+
+  if (!wasKillLow && millis() > (KILL_DURATION + killTime)) {
+    quadKill = !quadKill;
+    if (quadKill)
+      Serial.println("KILLING THE QUAD!!!");
+    else
+      Serial.println("Quad is Active!!!");
+    killTime = millis() + 5 * KILL_DURATION;
+  }
+  rxValues.safety = quadKill;
 }
 void updateTrims() {
   pitchTrim.updateValue();

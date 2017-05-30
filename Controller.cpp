@@ -39,6 +39,8 @@ uint8_t Controller::receive(rx_values_t* rxValues) {
 			i++;
 			if (rxValues->safety)
 				isRunning = false;
+			else
+				isRunning=true;
 	}
 	return i;
 }

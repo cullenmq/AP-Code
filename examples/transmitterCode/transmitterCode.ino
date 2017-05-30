@@ -16,7 +16,7 @@
 // toggle Serial input/output
 #define debug 1
 // default channel number
-int channel = 30;
+uint8_t channel = 30;
 // address of EEPROM
 int address = 0;
 // PID default
@@ -24,7 +24,7 @@ int address = 0;
 #define defaultI 0
 #define defaultD .5
 
-int PIDAddr, CalAddr;
+int PIDAddr, CalAddr, ChannelAddr;
 struct PIDVal {
   float P = defaultP, I = defaultI, D = defaultD;
 };
@@ -42,7 +42,8 @@ RF24 radio(CEpin, CSpin);
 // package struct
 rx_values_t rxValues;
 // timing variables for timing loop
-unsigned long curtime, prevTime;
+unsigned long killTime = 0;
+bool wasKillLow = true, quadKill = false;
 
 // trim variables for adjusting for drift
 trim rollTrim(upRollPin, downRollPin);
@@ -59,12 +60,16 @@ buttonManager flipButton(flipPin, 0x0, true), modeButton(modePin, 0x0, true);
 //SETUP FUNCTION: Initializes Serial, controller, buttons, and radio
 void setup() {
   //initializes the radio
-  controller.init();
+
   if (debug) {
     Serial.begin(38400);
     Serial.setTimeout(10);
     printf_begin();
   }
+  initEEPROMAddrs();
+  initChannel();
+  controller.init();
+  controller.setChannel(channel);
   //buttons
   //sets pinModes for buttons/LEDs
   initButtons();
@@ -76,7 +81,7 @@ void setup() {
     Serial.println("printing radio details");
     radio.printDetails();
   }
-  prevTime = millis();
+  killTime = millis();
 }
 //LOOP: Main function of the Controller
 void loop() {
@@ -97,9 +102,5 @@ void loop() {
     // update the quadcopter light
     auxIndicator(rxValues.auxLED);
   }
-  //  curtime = millis();
-  //  Serial.print("loop time: ");
-  //  Serial.println(curtime - prevTime);
-  //  prevTime = curtime;
 }
 

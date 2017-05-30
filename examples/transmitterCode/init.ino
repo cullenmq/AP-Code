@@ -1,3 +1,18 @@
+void initChannel() {
+  Serial.println("Initializing Default Channel");
+
+  // read in EEPROM
+  channel = EEPROM.readByte(ChannelAddr);
+  // if data has been written, update the values
+  if ((channel == 0xFF))
+  {
+    Serial.println("first time writing to Channel EEPROM");
+    channel = 30;
+    EEPROM.writeBlock(ChannelAddr, &channel);
+  }
+  Serial.print("Channel is: ");
+  Serial.println(channel);
+}
 void initButtons() {
   if (debug)
     Serial.println("intializing trim buttons");
@@ -24,7 +39,7 @@ void initPID() {
   test.D = -1;
   while (!EEPROM.isReady()) {};
   Serial.println("Initializing Default PID Values");
-  PIDAddr = EEPROM.getAddress(sizeof(PIDVal));
+
   // read in EEPROM
   EEPROM.readBlock(PIDAddr, mPID);
   Serial.print("PID Address: ");
@@ -42,9 +57,14 @@ void initPID() {
     EEPROM.updateBlock(PIDAddr, mPID);
   }
 }
+void initEEPROMAddrs() {
+  PIDAddr = EEPROM.getAddress(sizeof(PIDVal));
+  CalAddr = EEPROM.getAddress(sizeof(CalVal));
+  ChannelAddr = EEPROM.getAddress(sizeof(uint8_t));
+}
 void initCal() {
   Serial.println("Initializing Default Calibration Values");
-  CalAddr = EEPROM.getAddress(sizeof(CalVal));
+
   // read in EEPROM
   EEPROM.readBlock(CalAddr, mCal);
   // if data has been written, update the values

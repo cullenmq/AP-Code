@@ -24,6 +24,7 @@
 // analog pin for controller battery reading
 #define contBattPin A5
 
+#define KILL_DURATION 1000
 /********************************
  **** Voltage Divider Consts ****
  ********************************/
